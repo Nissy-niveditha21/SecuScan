@@ -104,7 +104,7 @@ from .ratelimit import (
     resolve_client_identity, admin_limiter,
     scheduler_tick_limiter,
 )
-from .rate_limiter import check_scan_rate_limit, RateLimitExceeded
+from .rate_limiter import check_scan_rate_limit
 from .validation import validate_target, validate_task_start_payload, validate_url
 from .reporting import reporting
 from .vault import VaultCrypto
@@ -194,22 +194,6 @@ async def get_or_set_cached(key: str, builder):
     value = await builder()
     await cache.set_json(key, value)
     return value
-
-
-from fastapi.responses import JSONResponse
-from starlette.status import HTTP_429_TOO_MANY_REQUESTS
-from .rate_limiter import RateLimitExceeded
-
-@router.exception_handler(RateLimitExceeded)
-async def rate_limit_exception_handler(request: Request, exc: RateLimitExceeded):
-    return JSONResponse(
-        status_code=HTTP_429_TOO_MANY_REQUESTS,
-        content={
-            "error": str(exc.detail) if hasattr(exc, 'detail') else "Too Many Requests",
-            "retry_after": getattr(exc, 'retry_after', 60),
-        },
-        headers={"Retry-After": str(getattr(exc, 'retry_after', 60))},
-    )
 
 
 async def require_owned_task(db, task_id: str, owner: str, columns: str = "owner_id") -> Dict[str, Any]:
